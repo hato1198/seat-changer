@@ -112,8 +112,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 利用可能な席数チェック
     const totalSeats = rows * cols;
     const availableSeats = totalSeats - excludedSeats.length;
-    if (availableSeats < students.length) {
-      alert(`利用可能な席数(${availableSeats})が学生数(${students.length})に足りません。席数を調整してください。`);
+    if (availableSeats != students.length) {
+      alert(`席数(${availableSeats})が生徒数(${students.length})と一致しません。席数を調整してください。`);
       return;
     }
 
