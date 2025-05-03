@@ -40,7 +40,7 @@ select{
   background:#f5f5f5;
   border: 1px solid #cccccc;
   border-radius: 4px;
-  font-weight: 200;
+  font-weight: 300;
 }
 input{
   height: 20px;
@@ -48,7 +48,7 @@ input{
   background:#f5f5f5;
   border: 1px solid #cccccc;
   border-radius: 4px;
-  font-weight: 200;
+  font-weight: 300;
 }
 
 /* 設定画面 */
