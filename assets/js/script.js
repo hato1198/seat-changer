@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let autoMode = false;
   let autoInterval = 0;
   let autoTimer = null;
+  let isTeacherView = false; // 教師視点（黒板下、席反転）かどうか
 
   // プレビューグリッド生成
   generatePreviewGrid();
@@ -143,6 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 初期化
     currentIndex = 0;
     occupiedSeats = [];
+    isTeacherView = false; // Reset view mode
 
     // 設定画面非表示、席替え画面表示
     configScreen.style.display = 'none';
@@ -282,13 +284,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // Faster animation for better feel
     const interval = setInterval(() => {
       if (movingCircle) movingCircle.classList.remove('circle');
-      const r = Math.floor(Math.random() * rows);
-      const c = Math.floor(Math.random() * cols);
-      movingCircle = seatTable.rows[r].cells[c];
-      // Only animate on available seats
-      if (!movingCircle.classList.contains('occupied') && !movingCircle.classList.contains('x')) {
-          movingCircle.classList.add('circle');
+      
+      // アニメーション用候補（空いている席のみ）をリストアップ
+      const candidates = [];
+      for(let r = 0; r < rows; r++) {
+        for(let c = 0; c < cols; c++) {
+          // DOM要素からクラスを確認して空き席判定
+          // 注意: DOM順序に関わらずrows[r]にアクセスするが、
+          // 席決め中はまだTeacherView切替ボタンが出ないため、DOM順はStudentView(標準)のまま
+          const cell = seatTable.rows[r].cells[c];
+          if (!cell.classList.contains('occupied') && !cell.classList.contains('x')) {
+            candidates.push({ r, c });
+          }
+        }
       }
+
+      if (candidates.length > 0) {
+        const cand = candidates[Math.floor(Math.random() * candidates.length)];
+        movingCircle = seatTable.rows[cand.r].cells[cand.c];
+        movingCircle.classList.add('circle');
+      }
+      
     }, 150);
     
     // Wait slightly before stopping to show animation
@@ -328,6 +344,17 @@ document.addEventListener('DOMContentLoaded', () => {
       displayFullscreen();
     });
     
+    const toggleViewButton = document.createElement('button');
+    toggleViewButton.textContent = '教師から見た配置に変更';
+    toggleViewButton.classList.add('assign-button');
+    toggleViewButton.style.borderColor = 'var(--primary-color)';
+    toggleViewButton.style.color = 'var(--primary-color)';
+    toggleViewButton.style.marginBottom = '10px';
+    toggleViewButton.addEventListener('click', () => {
+      toggleViewMode();
+      toggleViewButton.textContent = isTeacherView ? '生徒から見た配置に変更' : '教師から見た配置に変更';
+    });
+    
     const swapSeatButton = document.createElement('button');
     swapSeatButton.id = 'swap-seat-button';
     swapSeatButton.textContent = '席を入れ替える';
@@ -344,7 +371,36 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     controlsDiv.appendChild(showResultButton);
+    controlsDiv.appendChild(toggleViewButton);
     controlsDiv.appendChild(swapSeatButton);
+  }
+
+  function toggleViewMode() {
+    isTeacherView = !isTeacherView;
+    const stage = document.querySelector('.stage-container');
+    const blackboard = document.querySelector('.blackboard');
+    const table = document.getElementById('seat-table');
+    
+    // DOM上の行の並び順を反転させる
+    // insertBeforeは要素を移動させるため、後ろから順に追加していくことで反転できる
+    const rowsArr = Array.from(table.rows);
+    for (let i = rowsArr.length - 1; i >= 0; i--) {
+        table.appendChild(rowsArr[i]);
+    }
+
+    // 黒板の位置を変更
+    if (isTeacherView) {
+        // 教師視点: 黒板を下に移動（コンテナの最後に追加）
+        stage.appendChild(blackboard);
+        stage.appendChild(blackboard);
+        blackboard.style.marginTop = '2rem';
+        blackboard.style.marginBottom = '0';
+    } else {
+        // 生徒視点: 黒板を上に移動（テーブルの前に挿入）
+        stage.insertBefore(blackboard, table);
+        blackboard.style.marginTop = '0';
+        blackboard.style.marginBottom = '2rem';
+    }
   }
   
   function showSwapControls() {
@@ -402,11 +458,21 @@ document.addEventListener('DOMContentLoaded', () => {
     occupiedSeats[index1] = seatB;
     occupiedSeats[index2] = seatA;
     
-    const cellForStudent1 = seatTable.rows[originalSeatB.row].cells[originalSeatB.col];
+    // DOM上の行インデックスを計算（TeacherViewの場合は反転しているため補正）
+    let rowIndexA = originalSeatB.row; // seatBの行にstudent1(index1)を入れる
+    let rowIndexB = originalSeatA.row; // seatAの行にstudent2(index2)を入れる
+
+    if (isTeacherView) {
+        // DOMが反転している場合、論理行0はDOMの末尾(rows-1)になる
+        rowIndexA = (rows - 1) - rowIndexA;
+        rowIndexB = (rows - 1) - rowIndexB;
+    }
+
+    const cellForStudent1 = seatTable.rows[rowIndexA].cells[originalSeatB.col];
     cellForStudent1.textContent = students[index1].name;
     cellForStudent1.classList.add('occupied');
     
-    const cellForStudent2 = seatTable.rows[originalSeatA.row].cells[originalSeatA.col];
+    const cellForStudent2 = seatTable.rows[rowIndexB].cells[originalSeatA.col];
     cellForStudent2.textContent = students[index2].name;
     cellForStudent2.classList.add('occupied');
   }
@@ -419,15 +485,35 @@ document.addEventListener('DOMContentLoaded', () => {
     captureContainer.style.backgroundColor = 'white';
     captureContainer.style.padding = '40px';
     captureContainer.style.borderRadius = '8px';
-    captureContainer.style.display = 'inline-block';
+    captureContainer.style.display = 'flex'; // Flex column for layout
+    captureContainer.style.flexDirection = 'column';
+    captureContainer.style.alignItems = 'center';
     
+    // 黒板要素の作成
+    const blackboardDiv = document.createElement('div');
+    blackboardDiv.textContent = "黒板 / 教卓";
+    blackboardDiv.style.width = "80%";
+    blackboardDiv.style.backgroundColor = "#374151";
+    blackboardDiv.style.color = "#E5E7EB";
+    blackboardDiv.style.textAlign = "center";
+    blackboardDiv.style.padding = "0.5rem";
+    blackboardDiv.style.borderRadius = "4px";
+    blackboardDiv.style.letterSpacing = "2px";
+    // ビューに応じたマージン
+    blackboardDiv.style.marginBottom = isTeacherView ? "0" : "2rem";
+    blackboardDiv.style.marginTop = isTeacherView ? "2rem" : "0";
+
     const fullscreenTable = document.createElement('table');
     fullscreenTable.id = 'seat-table';
     fullscreenTable.style.borderCollapse = 'separate'; 
     fullscreenTable.style.borderSpacing = '10px';
     
     for (let r = 0; r < rows; r++) {
-      const row = fullscreenTable.insertRow();
+      // 教師視点の場合、最前列(r=0)を下に表示したい。
+      // 標準のappendRowは上から順に追加するので、
+      // 教師視点の場合は insertRow(0) で常に先頭に追加していけば、
+      // 0->先頭, 1->先頭(0は2番目へ)... となり、最終的に r=rows-1 が先頭、r=0 が末尾になる
+      const row = fullscreenTable.insertRow(isTeacherView ? 0 : -1);
       for (let c = 0; c < cols; c++) {
         const cell = row.insertCell();
         cell.style.boxShadow = "none";
@@ -470,7 +556,15 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     
-    captureContainer.appendChild(fullscreenTable);
+    // 要素の追加順序制御
+    if (isTeacherView) {
+        captureContainer.appendChild(fullscreenTable);
+        captureContainer.appendChild(blackboardDiv);
+    } else {
+        captureContainer.appendChild(blackboardDiv);
+        captureContainer.appendChild(fullscreenTable);
+    }
+    
     fullscreenDiv.appendChild(captureContainer);
     
     const saveButton = document.createElement('button');
