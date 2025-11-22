@@ -347,6 +347,12 @@ select {
   text-align: center;
 }
 
+#start-assignment-button {
+  border-radius: 50px;
+  padding: 1rem 3rem;
+  font-size: 1.1rem;
+}
+
 /* Assignment Screen */
 #assignment-screen {
   display: flex;
@@ -600,12 +606,13 @@ select {
 
 .fullscreen-actions button {
   padding: 12px 30px;
-  border-radius: 30px;
+  border-radius: 50px;
   box-shadow: var(--shadow-lg);
   border: none;
   font-size: 1.1rem;
   cursor: pointer;
   min-width: 140px;
+  transition: all 0.2s ease;
 }
 
 .fullscreen-save-btn {
@@ -613,10 +620,23 @@ select {
   color: white;
 }
 
+.fullscreen-save-btn:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 15px 20px -5px rgba(0, 0, 0, 0.15);
+}
+
 .fullscreen-close-btn {
   background-color: var(--surface-color);
   color: var(--text-main);
   border: 1px solid var(--border-color) !important;
+}
+
+.fullscreen-close-btn:hover {
+  background-color: #F3F4F6;
+  border-color: #D1D5DB !important;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
 /* Mobile Responsiveness */
