@@ -58,6 +58,10 @@ h3 {
   font-weight: 300;
 }
 
+.sp-break {
+  display: none;
+}
+
 .helper-text {
   font-size: 0.875rem;
   color: var(--text-muted);
@@ -618,10 +622,29 @@ select {
 /* Mobile Responsiveness */
 @media screen and (max-width: 768px) {
   h1 { font-size: 1.5rem; }
+
+  .sp-break {
+    display: inline;
+  }
   
   .config-container {
     grid-template-columns: 1fr;
     gap: 1rem;
+  }
+
+  .settings-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+   #preview-grid {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding: 0.5rem;
+  }
+  #preview-grid table {
+    margin: 0 auto;
   }
   
   #container {
@@ -632,7 +655,7 @@ select {
   #left-pane {
     width: 100%;
     max-width: none;
-    padding: 0 0 10px 0;
+    padding: 10px 0;
   }
   
   .status-card {

@@ -248,6 +248,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateInstruction() {
+    // リセット用にマージンを元に戻す（完了状態から戻ることは現状ないが念のため）
+    instruction.style.marginBottom = '';
+
     if (currentIndex < students.length) {
       if (autoMode) {
         instruction.style.display = 'block';
@@ -261,6 +264,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       instruction.style.display = 'block';
       instruction.textContent = 'すべての席が決まりました！';
+      // 完了時はボタンが消えるため、バランス調整で下のマージンをなくす
+      instruction.style.marginBottom = '0';
       assignButton.style.display = 'none';
       addPostAssignmentControls();
     }
@@ -358,8 +363,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggleViewButton = document.createElement('button');
     toggleViewButton.textContent = isTeacherView ? '生徒から見た配置に変更' : '教師から見た配置に変更';
     toggleViewButton.classList.add('assign-button');
-    toggleViewButton.style.borderColor = 'var(--primary-color)';
-    toggleViewButton.style.color = 'var(--primary-color)';
+    toggleViewButton.style.borderColor = 'var(--secondary-color)';
+    toggleViewButton.style.color = 'var(--secondary-color)';
     toggleViewButton.style.marginBottom = '10px';
     toggleViewButton.addEventListener('click', () => {
       toggleViewMode();
@@ -425,9 +430,9 @@ document.addEventListener('DOMContentLoaded', () => {
     Array.from(controlsDiv.children).forEach(child => child.style.display = 'none');
 
     // Instructionを更新
-    instruction.innerHTML = '入れ替える席の <span style="color:var(--primary-color); font-weight:bold;">1つ目</span> をクリックしてください';
+    instruction.innerHTML = '入れ替える人の <span style="color:var(--primary-color); font-weight:bold;">1人目</span> を選んでください';
+    instruction.style.marginBottom = '';
 
-    // キャンセルボタン追加
     const cancelButton = document.createElement('button');
     cancelButton.id = 'cancel-swap-button';
     cancelButton.textContent = '入れ替えをキャンセル';
@@ -453,6 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     Array.from(controlsDiv.children).forEach(child => child.style.display = 'block');
     instruction.textContent = 'すべての席が決まりました！';
+    instruction.style.marginBottom = '0';
   }
 
   function handleCellClick(cell) {
@@ -465,17 +471,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const r = parseInt(cell.getAttribute('data-r'), 10);
     const c = parseInt(cell.getAttribute('data-c'), 10);
 
+    // セルの表示名を取得
+    const studentName = cell.textContent;
+
     if (!swapSelection) {
         // 1つ目の選択
         swapSelection = { row: r, col: c, cell: cell };
         cell.classList.add('selected-swap');
-        instruction.innerHTML = '入れ替える席の <span style="color:var(--accent-color); font-weight:bold;">2つ目</span> をクリックしてください';
+        instruction.innerHTML = `<span style="color:var(--primary-color); font-weight:bold;">${studentName}</span> さんと入れ替える人を選んでください`;
     } else {
         // 同じ席をクリックしたら選択解除
         if (swapSelection.row === r && swapSelection.col === c) {
             cell.classList.remove('selected-swap');
             swapSelection = null;
-            instruction.innerHTML = '入れ替える席の <span style="color:var(--primary-color); font-weight:bold;">1つ目</span> をクリックしてください';
+            instruction.innerHTML = '入れ替える人の <span style="color:var(--primary-color); font-weight:bold;">1人目</span> を選んでください';
             return;
         }
 
