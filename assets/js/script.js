@@ -32,6 +32,11 @@ document.addEventListener('DOMContentLoaded', () => {
   let autoInterval = 0;
   let autoTimer = null;
   let isTeacherView = false; // 教師視点（黒板下、席反転）かどうか
+  let isAnimating = false; // アニメーション実行中フラグ
+
+  // 入れ替えモード用変数
+  let isSwapMode = false;
+  let swapSelection = null; // 最初に選択された席 {row, col}
 
   // プレビューグリッド生成
   generatePreviewGrid();
@@ -145,6 +150,8 @@ document.addEventListener('DOMContentLoaded', () => {
     currentIndex = 0;
     occupiedSeats = [];
     isTeacherView = false; // Reset view mode
+    isAnimating = false;
+    isSwapMode = false;
 
     // 設定画面非表示、席替え画面表示
     configScreen.style.display = 'none';
@@ -157,13 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // オートモードの場合、手動ボタンを非表示し、自動実行開始
     if (autoMode) {
       assignButton.style.display = 'none';
-      autoTimer = setInterval(() => {
-        if (currentIndex < students.length) {
-          assignSeat();
-        } else {
-          clearInterval(autoTimer);
-        }
-      }, autoInterval * 1000);
+      assignSeat(); // 初回実行
     }
   });
 
@@ -172,24 +173,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (autoNumberCheckbox.checked) {
       if (showFuriganaCheckbox.checked) {
         // 自動割り当てON,  読み仮名ON: 入力は「名前, 読み仮名」
-        // document.getElementById('student-info-label').textContent = "生徒情報";
         document.getElementById('explanation').textContent = "※「名前, 読み仮名」を番号順に改行区切りで入力";
         studentInfoTextarea.placeholder = "例：織田,おだ\n　　徳川,とくがわ\n　　豊臣,とよとみ";
       } else {
         // 自動割り当てON,  読み仮名OFF: 入力は「名前」だけ
-        // document.getElementById('student-info-label').textContent = "生徒情報";
         document.getElementById('explanation').textContent = "※名前を番号順に改行区切りで入力";
         studentInfoTextarea.placeholder = "例：織田\n　　徳川\n　　豊臣";
       }
     } else {
       if (showFuriganaCheckbox.checked) {
         // 自動割り当てOFF,  読み仮名ON: 入力は「番号, 名前, 読み仮名」
-        // document.getElementById('student-info-label').textContent = "生徒情報";
         document.getElementById('explanation').textContent = "※「番号, 名前, 読み仮名」を改行区切りで入力";
         studentInfoTextarea.placeholder = "例：1,織田,おだ\n　　2,徳川,とくがわ\n　　3,豊臣,とよとみ";
       } else {
         // 自動割り当てOFF,  読み仮名OFF: 入力は「番号, 名前」
-        // document.getElementById('student-info-label').textContent = "生徒情報";
         document.getElementById('explanation').textContent = "※「番号, 名前」を改行区切りで入力";
         studentInfoTextarea.placeholder = "例：1,織田\n　　2,徳川\n　　3,豊臣";
       }
@@ -217,10 +214,8 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
           if (btn.classList.contains('excluded')) {
             btn.classList.remove('excluded');
-            // btn.textContent = ''; // Controlled by CSS
           } else {
             btn.classList.add('excluded');
-            // btn.textContent = '✕'; // Controlled by CSS
           }
         });
         cell.appendChild(btn);
@@ -238,9 +233,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const row = seatTable.insertRow();
       for (let c = 0; c < cols; c++) {
         const cell = row.insertCell();
+        // データの位置特定用に属性を付与
+        cell.setAttribute('data-r', r);
+        cell.setAttribute('data-c', c);
+        cell.addEventListener('click', () => handleCellClick(cell)); // Click handler for swap
+
         if (excludedSeats.some(seat => seat.row === r && seat.col === c)) {
           cell.classList.add('x');
-          // cell.textContent = '✕'; // Removed text content to let CSS handle it cleanly
         } else {
           cell.textContent = '';
         }
@@ -268,8 +267,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }  
 
   function assignSeat() {
+    if (isAnimating) return; // アニメーション中は処理しない
     if (currentIndex >= students.length) return;
     
+    isAnimating = true; // アニメーション開始ロック
+    assignButton.disabled = true; // ボタン無効化
+
     let seat;
     do {
       const row = Math.floor(Math.random() * rows);
@@ -281,7 +284,6 @@ document.addEventListener('DOMContentLoaded', () => {
     );
     
     let movingCircle;
-    // Faster animation for better feel
     const interval = setInterval(() => {
       if (movingCircle) movingCircle.classList.remove('circle');
       
@@ -290,8 +292,6 @@ document.addEventListener('DOMContentLoaded', () => {
       for(let r = 0; r < rows; r++) {
         for(let c = 0; c < cols; c++) {
           // DOM要素からクラスを確認して空き席判定
-          // 注意: DOM順序に関わらずrows[r]にアクセスするが、
-          // 席決め中はまだTeacherView切替ボタンが出ないため、DOM順はStudentView(標準)のまま
           const cell = seatTable.rows[r].cells[c];
           if (!cell.classList.contains('occupied') && !cell.classList.contains('x')) {
             candidates.push({ r, c });
@@ -323,7 +323,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         currentIndex++;
         updateInstruction();
-    }, 800); // 800ms delay for the visual effect
+
+        // アニメーション終了処理
+        isAnimating = false;
+        assignButton.disabled = false;
+
+        // オートモードの場合は、アニメーション終了後に次の実行をスケジュール
+        if (autoMode && currentIndex < students.length) {
+          autoTimer = setTimeout(assignSeat, autoInterval * 1000);
+        }
+    }, 800);
   }
 
   assignButton.addEventListener('click', assignSeat);
@@ -334,6 +343,8 @@ document.addEventListener('DOMContentLoaded', () => {
       controlsDiv = document.createElement('div');
       controlsDiv.id = 'post-assignment-controls';
       leftPane.appendChild(controlsDiv);
+    } else {
+      controlsDiv.innerHTML = ''; // Clear existing controls if any
     }
     
     const showResultButton = document.createElement('button');
@@ -345,7 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     const toggleViewButton = document.createElement('button');
-    toggleViewButton.textContent = '教師から見た配置に変更';
+    toggleViewButton.textContent = isTeacherView ? '生徒から見た配置に変更' : '教師から見た配置に変更';
     toggleViewButton.classList.add('assign-button');
     toggleViewButton.style.borderColor = 'var(--primary-color)';
     toggleViewButton.style.color = 'var(--primary-color)';
@@ -363,11 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
     swapSeatButton.style.color = 'var(--secondary-color)';
 
     swapSeatButton.addEventListener('click', () => {
-      swapSeatButton.style.display = 'none';
-      showSwapControls();
-      if (lastNewAssignedCell) {
-        lastNewAssignedCell.classList.remove('new-assigned');
-      }
+      enableSwapMode();
     });
     
     controlsDiv.appendChild(showResultButton);
@@ -382,7 +389,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const table = document.getElementById('seat-table');
     
     // DOM上の行の並び順を反転させる
-    // insertBeforeは要素を移動させるため、後ろから順に追加していくことで反転できる
     const rowsArr = Array.from(table.rows);
     for (let i = rowsArr.length - 1; i >= 0; i--) {
         table.appendChild(rowsArr[i]);
@@ -390,93 +396,133 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 黒板の位置を変更
     if (isTeacherView) {
-        // 教師視点: 黒板を下に移動（コンテナの最後に追加）
         stage.appendChild(blackboard);
         stage.appendChild(blackboard);
         blackboard.style.marginTop = '2rem';
         blackboard.style.marginBottom = '0';
     } else {
-        // 生徒視点: 黒板を上に移動（テーブルの前に挿入）
         stage.insertBefore(blackboard, table);
         blackboard.style.marginTop = '0';
         blackboard.style.marginBottom = '2rem';
     }
   }
-  
-  function showSwapControls() {
-    let controlsDiv = document.getElementById('post-assignment-controls');
-    
-    const input1 = document.createElement('input');
-    input1.type = 'number';
-    input1.id = 'swap-input-1';
-    input1.placeholder = '入れ替える人の番号（1人目）';
-    
-    const input2 = document.createElement('input');
-    input2.type = 'number';
-    input2.id = 'swap-input-2';
-    input2.placeholder = '入れ替える人の番号（2人目）';
-    
-    const confirmSwapButton = document.createElement('button');
-    confirmSwapButton.id = 'confirm-swap-button';
-    confirmSwapButton.textContent = '決定';
-    confirmSwapButton.classList.add('assign-button');
-    confirmSwapButton.addEventListener('click', () => {
-      const num1 = parseInt(input1.value);
-      const num2 = parseInt(input2.value);
-      if (isNaN(num1) || isNaN(num2)) {
-        alert('両方の番号を入力してください。');
-        return;
-      }
-      performSwap(num1, num2);
-      input1.remove();
-      input2.remove();
-      confirmSwapButton.remove();
-      const swapSeatButton = document.getElementById('swap-seat-button');
-      swapSeatButton.style.display = 'block';
-    });
-    
-    controlsDiv.appendChild(input1);
-    controlsDiv.appendChild(input2);
-    controlsDiv.appendChild(confirmSwapButton);
-  }
-  
-  function performSwap(num1, num2) {
-    const index1 = students.findIndex(s => s.number === num1);
-    const index2 = students.findIndex(s => s.number === num2);
-    if (index1 === -1 || index2 === -1) {
-      alert('入力された番号の学生が見つかりません。');
-      return;
-    }
-    const seatA = occupiedSeats[index1];
-    const seatB = occupiedSeats[index2];
-    if (!seatA || !seatB) {
-      alert('指定された学生は席に割り当てられていません。');
-      return;
-    }
-    const originalSeatA = { ...seatA };
-    const originalSeatB = { ...seatB };
-    occupiedSeats[index1] = seatB;
-    occupiedSeats[index2] = seatA;
-    
-    // DOM上の行インデックスを計算（TeacherViewの場合は反転しているため補正）
-    let rowIndexA = originalSeatB.row; // seatBの行にstudent1(index1)を入れる
-    let rowIndexB = originalSeatA.row; // seatAの行にstudent2(index2)を入れる
 
-    if (isTeacherView) {
-        // DOMが反転している場合、論理行0はDOMの末尾(rows-1)になる
-        rowIndexA = (rows - 1) - rowIndexA;
-        rowIndexB = (rows - 1) - rowIndexB;
+  // --- Swap Mode Logic ---
+
+  function enableSwapMode() {
+    isSwapMode = true;
+    swapSelection = null;
+    seatTable.classList.add('swap-mode');
+    
+    // Clear "New Assigned" highlight for cleaner look
+    if (lastNewAssignedCell) {
+        lastNewAssignedCell.classList.remove('new-assigned');
     }
 
-    const cellForStudent1 = seatTable.rows[rowIndexA].cells[originalSeatB.col];
-    cellForStudent1.textContent = students[index1].name;
-    cellForStudent1.classList.add('occupied');
+    // Update Left Pane UI
+    const controlsDiv = document.getElementById('post-assignment-controls');
+    // 既存のボタンを一時保存（DOMから削除はしないが非表示に）
+    Array.from(controlsDiv.children).forEach(child => child.style.display = 'none');
+
+    // Instructionを更新
+    instruction.innerHTML = '入れ替える席の <span style="color:var(--primary-color); font-weight:bold;">1つ目</span> をクリックしてください';
+
+    // キャンセルボタン追加
+    const cancelButton = document.createElement('button');
+    cancelButton.id = 'cancel-swap-button';
+    cancelButton.textContent = '入れ替えをキャンセル';
+    cancelButton.classList.add('assign-button');
+    cancelButton.style.backgroundColor = 'var(--secondary-color)';
+    cancelButton.style.color = 'white';
+    cancelButton.onclick = disableSwapMode;
+    controlsDiv.appendChild(cancelButton);
+  }
+
+  function disableSwapMode() {
+    isSwapMode = false;
+    swapSelection = null;
+    seatTable.classList.remove('swap-mode');
+
+    // 選択ハイライト解除
+    seatTable.querySelectorAll('.selected-swap').forEach(cell => cell.classList.remove('selected-swap'));
+
+    // Left Pane UI復元
+    const controlsDiv = document.getElementById('post-assignment-controls');
+    const cancelButton = document.getElementById('cancel-swap-button');
+    if (cancelButton) cancelButton.remove();
+
+    Array.from(controlsDiv.children).forEach(child => child.style.display = 'block');
+    instruction.textContent = 'すべての席が決まりました！';
+  }
+
+  function handleCellClick(cell) {
+    if (!isSwapMode || isAnimating) return;
+
+    // 空席や除外席はクリックできない（入れ替え対象外）
+    if (!cell.classList.contains('occupied')) return;
+
+    // データの位置を取得（TeacherViewでも属性は変わらない）
+    const r = parseInt(cell.getAttribute('data-r'), 10);
+    const c = parseInt(cell.getAttribute('data-c'), 10);
+
+    if (!swapSelection) {
+        // 1つ目の選択
+        swapSelection = { row: r, col: c, cell: cell };
+        cell.classList.add('selected-swap');
+        instruction.innerHTML = '入れ替える席の <span style="color:var(--accent-color); font-weight:bold;">2つ目</span> をクリックしてください';
+    } else {
+        // 同じ席をクリックしたら選択解除
+        if (swapSelection.row === r && swapSelection.col === c) {
+            cell.classList.remove('selected-swap');
+            swapSelection = null;
+            instruction.innerHTML = '入れ替える席の <span style="color:var(--primary-color); font-weight:bold;">1つ目</span> をクリックしてください';
+            return;
+        }
+
+        // 2つ目の選択 -> 入れ替え実行
+        cell.classList.add('selected-swap');
+        executeSwap(swapSelection, { row: r, col: c, cell: cell });
+    }
+  }
+
+  function executeSwap(seat1, seat2) {
+    isAnimating = true;
+    instruction.textContent = '席を入れ替えています...';
     
-    const cellForStudent2 = seatTable.rows[rowIndexB].cells[originalSeatA.col];
-    cellForStudent2.textContent = students[index2].name;
-    cellForStudent2.classList.add('occupied');
+    // アニメーション用クラス付与
+    seat1.cell.classList.add('swapping');
+    seat2.cell.classList.add('swapping');
+
+    // データ更新の準備
+    // occupiedSeatsからそれぞれの席データを探す
+    const index1 = occupiedSeats.findIndex(s => s.row === seat1.row && s.col === seat1.col);
+    const index2 = occupiedSeats.findIndex(s => s.row === seat2.row && s.col === seat2.col);
+
+    // 0.4秒後に内容を入れ替えてアニメーション終了
+    setTimeout(() => {
+        // DOMのテキスト交換
+        const tempText = seat1.cell.textContent;
+        seat1.cell.textContent = seat2.cell.textContent;
+        seat2.cell.textContent = tempText;
+
+        // occupiedSeats配列内の位置情報の交換（学生データは配列インデックスと紐づいているため、配列の中身を入れ替えるのではなく、座席情報を入れ替える）
+        // occupiedSeats[i] は i番目の学生の座席情報 {row, col}
+        // 単純に、DOM上の表示を変えたので、occupiedSeats内の対応を入れ替える必要がある。
+        // 学生A (index1の席) が Seat2に行き、学生B (index2の席) が Seat1に行く。
+        if (index1 !== -1) occupiedSeats[index1] = { row: seat2.row, col: seat2.col };
+        if (index2 !== -1) occupiedSeats[index2] = { row: seat1.row, col: seat1.col };
+
+        // クラス解除
+        seat1.cell.classList.remove('swapping', 'selected-swap');
+        seat2.cell.classList.remove('swapping', 'selected-swap');
+
+        isAnimating = false;
+        disableSwapMode();
+    }, 400);
   }
   
+  // --- Fullscreen & Export ---
+
   function displayFullscreen() {
     const fullscreenDiv = document.createElement('div');
     fullscreenDiv.classList.add('fullscreen');
@@ -485,11 +531,11 @@ document.addEventListener('DOMContentLoaded', () => {
     captureContainer.style.backgroundColor = 'white';
     captureContainer.style.padding = '40px';
     captureContainer.style.borderRadius = '8px';
-    captureContainer.style.display = 'flex'; // Flex column for layout
+    captureContainer.style.display = 'flex';
     captureContainer.style.flexDirection = 'column';
     captureContainer.style.alignItems = 'center';
     
-    // 黒板要素の作成
+    // 黒板要素
     const blackboardDiv = document.createElement('div');
     blackboardDiv.textContent = "黒板 / 教卓";
     blackboardDiv.style.width = "80%";
@@ -499,7 +545,6 @@ document.addEventListener('DOMContentLoaded', () => {
     blackboardDiv.style.padding = "0.5rem";
     blackboardDiv.style.borderRadius = "4px";
     blackboardDiv.style.letterSpacing = "2px";
-    // ビューに応じたマージン
     blackboardDiv.style.marginBottom = isTeacherView ? "0" : "2rem";
     blackboardDiv.style.marginTop = isTeacherView ? "2rem" : "0";
 
@@ -509,10 +554,6 @@ document.addEventListener('DOMContentLoaded', () => {
     fullscreenTable.style.borderSpacing = '10px';
     
     for (let r = 0; r < rows; r++) {
-      // 教師視点の場合、最前列(r=0)を下に表示したい。
-      // 標準のappendRowは上から順に追加するので、
-      // 教師視点の場合は insertRow(0) で常に先頭に追加していけば、
-      // 0->先頭, 1->先頭(0は2番目へ)... となり、最終的に r=rows-1 が先頭、r=0 が末尾になる
       const row = fullscreenTable.insertRow(isTeacherView ? 0 : -1);
       for (let c = 0; c < cols; c++) {
         const cell = row.insertCell();
@@ -556,7 +597,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     
-    // 要素の追加順序制御
     if (isTeacherView) {
         captureContainer.appendChild(fullscreenTable);
         captureContainer.appendChild(blackboardDiv);
@@ -567,15 +607,22 @@ document.addEventListener('DOMContentLoaded', () => {
     
     fullscreenDiv.appendChild(captureContainer);
     
+    // アクションボタンエリア
+    const actionDiv = document.createElement('div');
+    actionDiv.className = 'fullscreen-actions';
+
+    const closeButton = document.createElement('button');
+    closeButton.textContent = '閉じる';
+    closeButton.className = 'fullscreen-close-btn';
+    closeButton.addEventListener('click', () => {
+        document.body.removeChild(fullscreenDiv);
+    });
+
     const saveButton = document.createElement('button');
-    saveButton.textContent = '画像を保存して閉じる';
-    fullscreenDiv.appendChild(saveButton);
-    
-    document.body.appendChild(fullscreenDiv);
-    
+    saveButton.textContent = '画像を保存';
+    saveButton.className = 'fullscreen-save-btn';
     saveButton.addEventListener('click', () => {
-      saveButton.style.display = 'none';
-      
+      // ボタン類を隠す必要はない（captureContainer外にあるため）
       html2canvas(captureContainer, {
         scale: 2,
         backgroundColor: '#ffffff',
@@ -586,13 +633,16 @@ document.addEventListener('DOMContentLoaded', () => {
         link.download = 'seating-chart.png';
         link.href = canvas.toDataURL('image/png');
         link.click();
-        
-        document.body.removeChild(fullscreenDiv);
       }).catch(err => {
         console.error(err);
         alert('画像の保存に失敗しました');
-        saveButton.style.display = 'block';
       });
     });
+
+    actionDiv.appendChild(closeButton);
+    actionDiv.appendChild(saveButton);
+    fullscreenDiv.appendChild(actionDiv);
+    
+    document.body.appendChild(fullscreenDiv);
   }
 });

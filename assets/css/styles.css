@@ -81,12 +81,19 @@ h3 {
   font-family: var(--font-base);
 }
 
+.assign-button:disabled {
+  background-color: #9CA3AF;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .primary-btn {
   background-color: var(--primary-color);
   color: white;
 }
 
-.primary-btn:hover {
+.primary-btn:hover:not(:disabled) {
   background-color: var(--primary-hover);
   transform: translateY(-1px);
   box-shadow: var(--shadow-lg);
@@ -100,7 +107,7 @@ h3 {
   padding: 1rem;
 }
 
-.action-btn:hover {
+.action-btn:hover:not(:disabled) {
   background-color: #059669;
   transform: translateY(-1px);
 }
@@ -481,6 +488,27 @@ select {
   transform: scale(1.05);
 }
 
+/* Swap Mode Styles */
+#seat-table.swap-mode td {
+  cursor: pointer;
+}
+#seat-table.swap-mode td:hover:not(.x):not(:empty) {
+  border-color: var(--secondary-color);
+  background-color: #F1F5F9;
+}
+#seat-table td.selected-swap {
+  background-color: #FEF3C7 !important;
+  border-color: #F59E0B !important;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.3), 0 2px 0 #D97706 !important;
+  transform: translateY(-2px);
+  z-index: 20;
+}
+#seat-table td.swapping {
+  transform: scale(0.5);
+  opacity: 0.5;
+  transition: transform 0.4s ease, opacity 0.4s ease;
+}
+
 @keyframes popIn {
   from { transform: scale(0.8); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
@@ -559,17 +587,32 @@ select {
   font-weight: 600;
 }
 
-.fullscreen button {
+.fullscreen-actions {
   position: fixed;
   bottom: 30px;
-  background-color: var(--primary-color);
-  color: white;
+  display: flex;
+  gap: 20px;
+}
+
+.fullscreen-actions button {
   padding: 12px 30px;
   border-radius: 30px;
   box-shadow: var(--shadow-lg);
   border: none;
   font-size: 1.1rem;
   cursor: pointer;
+  min-width: 140px;
+}
+
+.fullscreen-save-btn {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.fullscreen-close-btn {
+  background-color: var(--surface-color);
+  color: var(--text-main);
+  border: 1px solid var(--border-color) !important;
 }
 
 /* Mobile Responsiveness */
