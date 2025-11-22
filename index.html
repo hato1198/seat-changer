@@ -6,7 +6,8 @@
   <link rel="icon" href="https://hato1198.github.io/seat-changer/assets/images/favicon.ico" type="image/x-icon"/>
   <link rel="shortcut icon" href="https://hato1198.github.io/seat-changer/assets/images/favicon.ico" type="image/x-icon"/>
   <title>ランダム席替えツール</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100;300;400;500&display=swap" rel="stylesheet">
+  <!-- Added font weights 700 for bold headings -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/styles.css">
   <meta name="generator" content="Jekyll v3.10.0" />
   <meta property="og:title" content="ランダム席替えツール" />
@@ -29,85 +30,130 @@
 <body>
   <!-- 設定画面 -->
   <div id="config-screen">
-    <h1>ランダム席替えツール</h1>
+    <div class="screen-header">
+      <h1>ランダム席替えツール</h1>
+      <p class="subtitle">座席と生徒情報を入力して、くじ引き風に席を決めましょう</p>
+    </div>
+    
     <div class="config-container">
-      <div class="config-left">
-        <label for="student-info" id="student-info-label">生徒情報　</label>
-        <label for="student-info" id="explanation">※名前を番号順に改行区切りで入力</label><br>
-        <textarea id="student-info" rows="10" cols="50" placeholder="例：織田&#13;　　徳川&#13;　　豊臣"></textarea>
-
-        <div id="extra-options">
-          <label>
-            <input type="checkbox" id="auto-number" checked />
-            番号を上から順番に自動で割り当てる
-          </label>
-          <br>
-          <label>
-            <input type="checkbox" id="show-furigana" />
-            座席表に読み仮名を表示する
-          </label>
+      <div class="config-card config-left">
+        <div class="card-header">
+          <h2>1. 生徒情報の入力</h2>
         </div>
-        <br>
-        <label for="assignment-order">席決定順:</label>
-        <select id="assignment-order">
-          <option value="asc" selected>番号が小さい順</option>
-          <option value="desc">番号が大きい順</option>
-          <option value="random">ランダム</option>
-        </select>
-        <br>
-        <br>
-        <!-- オートモードの追加 -->
-        <label for="auto-mode">実行モード:</label>
-        <select id="auto-mode">
-          <option value="manual" selected>手動</option>
-          <option value="auto">自動</option>
-        </select>
-        <div id="auto-interval-container" style="display: none;">
-          <label for="auto-interval">間隔（秒）:</label>
-          <input type="number" id="auto-interval" min="0" step="any" value="2">
+        <div class="card-body">
+          <div class="input-group">
+            <label for="student-info" id="student-info-label">生徒名簿</label>
+            <p id="explanation" class="helper-text">※名前を番号順に改行区切りで入力してください</p>
+            <textarea id="student-info" placeholder="例：織田&#13;　　徳川&#13;　　豊臣"></textarea>
+          </div>
+
+          <div id="extra-options" class="options-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="auto-number" checked />
+              <span class="checkmark"></span>
+              番号を自動で割り当てる
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="show-furigana" />
+              <span class="checkmark"></span>
+              座席表に読み仮名を表示
+            </label>
+          </div>
+
+          <div class="settings-row">
+            <div class="input-group">
+              <label for="assignment-order">席決定順</label>
+              <div class="select-wrapper">
+                <select id="assignment-order">
+                  <option value="asc" selected>番号が小さい順</option>
+                  <option value="desc">番号が大きい順</option>
+                  <option value="random">ランダム</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="input-group">
+              <label for="auto-mode">実行モード</label>
+              <div class="select-wrapper">
+                <select id="auto-mode">
+                  <option value="manual" selected>手動クリック</option>
+                  <option value="auto">全自動</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div id="auto-interval-container" class="input-group" style="display: none;">
+            <label for="auto-interval">決定間隔（秒）</label>
+            <input type="number" id="auto-interval" min="0" step="0.1" value="2">
+          </div>
         </div>
       </div>
-      <div class="config-right">
-        <label for="row-count">縦の席数:</label>
-        <select id="row-count">
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-          <option value="6" selected>6</option>
-          <option value="7">7</option>
-          <option value="8">8</option>
-        </select>
-        
-        <label for="col-count">横の席数:</label>
-        <select id="col-count">
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-          <option value="6" selected>6</option>
-          <option value="7">7</option>
-          <option value="8">8</option>
-        </select>
-        <h2>席の配置</h2>
-        <div id="preview-grid"></div>
-        <label for="preview-grid" id="explanation">※クリックすると席を無効にできます</label>
-        <br>
+
+      <div class="config-card config-right">
+        <div class="card-header">
+          <h2>2. 座席レイアウト</h2>
+        </div>
+        <div class="card-body">
+          <div class="settings-row">
+            <div class="input-group">
+              <label for="row-count">縦の列数</label>
+              <div class="select-wrapper">
+                <select id="row-count">
+                  <option value="2">2列</option>
+                  <option value="3">3列</option>
+                  <option value="4">4列</option>
+                  <option value="5">5列</option>
+                  <option value="6" selected>6列</option>
+                  <option value="7">7列</option>
+                  <option value="8">8列</option>
+                </select>
+              </div>
+            </div>
+            <div class="input-group">
+              <label for="col-count">横の行数</label>
+              <div class="select-wrapper">
+                <select id="col-count">
+                  <option value="2">2席</option>
+                  <option value="3">3席</option>
+                  <option value="4">4席</option>
+                  <option value="5">5席</option>
+                  <option value="6" selected>6席</option>
+                  <option value="7">7席</option>
+                  <option value="8">8席</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="preview-section">
+            <h3>配置プレビュー</h3>
+            <p class="helper-text">※クリックして使用しない席を設定</p>
+            <div id="preview-grid"></div>
+          </div>
+        </div>
       </div>
     </div>
-    <button id="start-assignment-button" class="assign-button">席替えを始める</button>
+    
+    <div class="action-area">
+      <button id="start-assignment-button" class="assign-button primary-btn">席替えを始める</button>
+    </div>
   </div>
 
-  <!-- 席替え画面（初めは非表示） -->
+  <!-- 席替え画面 -->
   <div id="assignment-screen" style="display:none;">
     <div id="container">
       <div id="left-pane">
-        <h2 id="instruction"></h2>
-        <!-- 手動モードの場合のみ表示 -->
-        <button id="assign-button" class="assign-button">席を決める</button>
+        <div class="status-card">
+          <h2 id="instruction">準備完了</h2>
+          <button id="assign-button" class="assign-button action-btn">席を決める</button>
+        </div>
       </div>
       <div id="right-pane">
-        <table id="seat-table"></table>
+        <div class="stage-container">
+          <div class="blackboard">黒板 / 教卓</div>
+          <table id="seat-table"></table>
+        </div>
       </div>
     </div>
   </div>

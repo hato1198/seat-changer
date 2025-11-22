@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 設定画面非表示、席替え画面表示
     configScreen.style.display = 'none';
-    assignmentScreen.style.display = 'flex';
+    assignmentScreen.style.display = 'flex'; // Changed to 'flex' to work with new CSS
 
     // 席替え画面テーブル生成
     generateTable();
@@ -170,24 +170,24 @@ document.addEventListener('DOMContentLoaded', () => {
     if (autoNumberCheckbox.checked) {
       if (showFuriganaCheckbox.checked) {
         // 自動割り当てON,  読み仮名ON: 入力は「名前, 読み仮名」
-        document.getElementById('student-info-label').textContent = "生徒情報　";
+        // document.getElementById('student-info-label').textContent = "生徒情報";
         document.getElementById('explanation').textContent = "※「名前, 読み仮名」を番号順に改行区切りで入力";
         studentInfoTextarea.placeholder = "例：織田,おだ\n　　徳川,とくがわ\n　　豊臣,とよとみ";
       } else {
         // 自動割り当てON,  読み仮名OFF: 入力は「名前」だけ
-        document.getElementById('student-info-label').textContent = "生徒情報　";
+        // document.getElementById('student-info-label').textContent = "生徒情報";
         document.getElementById('explanation').textContent = "※名前を番号順に改行区切りで入力";
         studentInfoTextarea.placeholder = "例：織田\n　　徳川\n　　豊臣";
       }
     } else {
       if (showFuriganaCheckbox.checked) {
         // 自動割り当てOFF,  読み仮名ON: 入力は「番号, 名前, 読み仮名」
-        document.getElementById('student-info-label').textContent = "生徒情報　";
+        // document.getElementById('student-info-label').textContent = "生徒情報";
         document.getElementById('explanation').textContent = "※「番号, 名前, 読み仮名」を改行区切りで入力";
         studentInfoTextarea.placeholder = "例：1,織田,おだ\n　　2,徳川,とくがわ\n　　3,豊臣,とよとみ";
       } else {
         // 自動割り当てOFF,  読み仮名OFF: 入力は「番号, 名前」
-        document.getElementById('student-info-label').textContent = "生徒情報　";
+        // document.getElementById('student-info-label').textContent = "生徒情報";
         document.getElementById('explanation').textContent = "※「番号, 名前」を改行区切りで入力";
         studentInfoTextarea.placeholder = "例：1,織田\n　　2,徳川\n　　3,豊臣";
       }
@@ -211,13 +211,14 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.textContent = '';
         btn.setAttribute('data-row', r);
         btn.setAttribute('data-col', c);
+        btn.title = "クリックして除外設定"; // Tooltip added
         btn.addEventListener('click', () => {
           if (btn.classList.contains('excluded')) {
             btn.classList.remove('excluded');
-            btn.textContent = '';
+            // btn.textContent = ''; // Controlled by CSS
           } else {
             btn.classList.add('excluded');
-            btn.textContent = '✕';
+            // btn.textContent = '✕'; // Controlled by CSS
           }
         });
         cell.appendChild(btn);
@@ -237,9 +238,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const cell = row.insertCell();
         if (excludedSeats.some(seat => seat.row === r && seat.col === c)) {
           cell.classList.add('x');
-          cell.textContent = '✕';
+          // cell.textContent = '✕'; // Removed text content to let CSS handle it cleanly
         } else {
-          cell.textContent = '\u2003';
+          cell.textContent = '';
         }
       }
     }
@@ -249,15 +250,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (currentIndex < students.length) {
       if (autoMode) {
         instruction.style.display = 'block';
-        instruction.textContent = `${students[currentIndex].name}さんの席を決めています……`;
+        instruction.innerHTML = `<span style="color:var(--primary-color); font-weight:bold;">${students[currentIndex].name}</span> さんの席を決めています…`;
         assignButton.textContent = "席を決める";
       } else {
-        instruction.style.display = 'none';
-        assignButton.textContent = `${students[currentIndex].name}さんの席を決める`;
+        instruction.style.display = 'block'; // Always show instruction
+        instruction.innerHTML = `次は <span style="color:var(--primary-color); font-weight:bold;">${students[currentIndex].name}</span> さん`;
+        assignButton.textContent = "くじを引く"; // Changed text for better UX
       }
     } else {
       instruction.style.display = 'block';
-      instruction.textContent = '席替えが完了しました！';
+      instruction.textContent = 'すべての席が決まりました！';
       assignButton.style.display = 'none';
       addPostAssignmentControls();
     }
@@ -277,28 +279,35 @@ document.addEventListener('DOMContentLoaded', () => {
     );
     
     let movingCircle;
+    // Faster animation for better feel
     const interval = setInterval(() => {
       if (movingCircle) movingCircle.classList.remove('circle');
       const r = Math.floor(Math.random() * rows);
       const c = Math.floor(Math.random() * cols);
       movingCircle = seatTable.rows[r].cells[c];
-      movingCircle.classList.add('circle');
-    }, 200);
+      // Only animate on available seats
+      if (!movingCircle.classList.contains('occupied') && !movingCircle.classList.contains('x')) {
+          movingCircle.classList.add('circle');
+      }
+    }, 150);
     
-    clearInterval(interval);
-    if (movingCircle) movingCircle.classList.remove('circle');
-    const finalCell = seatTable.rows[seat.row].cells[seat.col];
-    finalCell.classList.add('occupied');
-    finalCell.textContent = students[currentIndex].name;
-    occupiedSeats.push(seat);
-    if (lastNewAssignedCell) {
-      lastNewAssignedCell.classList.remove('new-assigned');
-    }
-    finalCell.classList.add('new-assigned');
-    lastNewAssignedCell = finalCell;
-    
-    currentIndex++;
-    updateInstruction();
+    // Wait slightly before stopping to show animation
+    setTimeout(() => {
+        clearInterval(interval);
+        if (movingCircle) movingCircle.classList.remove('circle');
+        const finalCell = seatTable.rows[seat.row].cells[seat.col];
+        finalCell.classList.add('occupied');
+        finalCell.textContent = students[currentIndex].name;
+        occupiedSeats.push(seat);
+        if (lastNewAssignedCell) {
+          lastNewAssignedCell.classList.remove('new-assigned');
+        }
+        finalCell.classList.add('new-assigned');
+        lastNewAssignedCell = finalCell;
+        
+        currentIndex++;
+        updateInstruction();
+    }, 800); // 800ms delay for the visual effect
   }
 
   assignButton.addEventListener('click', assignSeat);
@@ -308,16 +317,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!controlsDiv) {
       controlsDiv = document.createElement('div');
       controlsDiv.id = 'post-assignment-controls';
-      controlsDiv.style.marginTop = '20px';
-      controlsDiv.style.display = 'flex';
-      controlsDiv.style.flexDirection = 'column';
-      controlsDiv.style.gap = '10px';
       leftPane.appendChild(controlsDiv);
     }
     
     const showResultButton = document.createElement('button');
     showResultButton.id = 'show-result-button';
-    showResultButton.textContent = '座席表を生成';
+    showResultButton.textContent = '全体座席表を表示 / 画像保存';
     showResultButton.classList.add('assign-button');
     showResultButton.addEventListener('click', () => {
       displayFullscreen();
@@ -327,6 +332,9 @@ document.addEventListener('DOMContentLoaded', () => {
     swapSeatButton.id = 'swap-seat-button';
     swapSeatButton.textContent = '席を入れ替える';
     swapSeatButton.classList.add('assign-button');
+    swapSeatButton.style.borderColor = 'var(--secondary-color)';
+    swapSeatButton.style.color = 'var(--secondary-color)';
+
     swapSeatButton.addEventListener('click', () => {
       swapSeatButton.style.display = 'none';
       showSwapControls();
@@ -345,16 +353,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const input1 = document.createElement('input');
     input1.type = 'number';
     input1.id = 'swap-input-1';
-    input1.placeholder = '入れ替える人の番号1';
+    input1.placeholder = '入れ替える人の番号（1人目）';
     
     const input2 = document.createElement('input');
     input2.type = 'number';
     input2.id = 'swap-input-2';
-    input2.placeholder = '入れ替える人の番号2';
+    input2.placeholder = '入れ替える人の番号（2人目）';
     
     const confirmSwapButton = document.createElement('button');
     confirmSwapButton.id = 'confirm-swap-button';
-    confirmSwapButton.textContent = '入れ替えを決定';
+    confirmSwapButton.textContent = '決定';
     confirmSwapButton.classList.add('assign-button');
     confirmSwapButton.addEventListener('click', () => {
       const num1 = parseInt(input1.value);
@@ -407,51 +415,89 @@ document.addEventListener('DOMContentLoaded', () => {
     const fullscreenDiv = document.createElement('div');
     fullscreenDiv.classList.add('fullscreen');
     
+    const captureContainer = document.createElement('div');
+    captureContainer.style.backgroundColor = 'white';
+    captureContainer.style.padding = '40px';
+    captureContainer.style.borderRadius = '8px';
+    captureContainer.style.display = 'inline-block';
+    
     const fullscreenTable = document.createElement('table');
     fullscreenTable.id = 'seat-table';
+    fullscreenTable.style.borderCollapse = 'separate'; 
+    fullscreenTable.style.borderSpacing = '10px';
     
     for (let r = 0; r < rows; r++) {
       const row = fullscreenTable.insertRow();
       for (let c = 0; c < cols; c++) {
         const cell = row.insertCell();
+        cell.style.boxShadow = "none";
         if (excludedSeats.some(seat => seat.row === r && seat.col === c)) {
-          cell.classList.add('x');
-          cell.textContent = '✕';
+          cell.style.border = "none"; 
+          cell.style.background = "transparent";
         } else {
           const occupied = occupiedSeats.find(s => s.row === r && s.col === c);
           if (occupied) {
             const studentIndex = occupiedSeats.indexOf(occupied);
             const student = students[studentIndex];
+            cell.style.border = "2px solid #1F2937";
+            cell.style.borderRadius = "8px";
+            cell.style.padding = "10px";
+            cell.style.textAlign = "center";
+            cell.style.verticalAlign = "middle";
+            cell.style.width = "140px";
+            cell.style.height = "100px";
+            cell.style.backgroundColor = "#fff";
+
             if (showFuriganaCheckbox.checked && student.reading) {
               cell.innerHTML = `
-                <span class="yomigana">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${student.reading}</span><br>
-                <span class="number">${student.number} </span>
-                <span class="kanji">${student.name}</span>
+                <div style="font-size: 0.7rem; color: #4B5563; margin-bottom: 4px;">${student.reading}</div>
+                <div style="font-size: 1.4rem; font-weight: 600; color: #1F2937;">
+                  <span style="font-size: 1rem; margin-right: 4px;">${student.number}.</span>${student.name}
+                </div>
               `;
             } else {
-              cell.innerHTML = `<span class="number">${student.number} </span><span class="kanji">${student.name}</span>`;
+              cell.innerHTML = `
+                <div style="font-size: 1.4rem; font-weight: 600; color: #1F2937;">
+                  <span style="font-size: 1rem; margin-right: 4px;">${student.number}.</span>${student.name}
+                </div>
+              `;
             }            
           } else {
-            cell.textContent = '\u2003';
+             cell.style.border = "2px dashed #CBD5E1";
+             cell.style.borderRadius = "8px";
           }
         }
       }
     }
     
-    fullscreenDiv.appendChild(fullscreenTable);
+    captureContainer.appendChild(fullscreenTable);
+    fullscreenDiv.appendChild(captureContainer);
     
     const saveButton = document.createElement('button');
-    saveButton.textContent = '画像として保存';
+    saveButton.textContent = '画像を保存して閉じる';
     fullscreenDiv.appendChild(saveButton);
     
     document.body.appendChild(fullscreenDiv);
     
     saveButton.addEventListener('click', () => {
-      html2canvas(fullscreenTable).then(canvas => {
+      saveButton.style.display = 'none';
+      
+      html2canvas(captureContainer, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        logging: false,
+        useCORS: true
+      }).then(canvas => {
         const link = document.createElement('a');
         link.download = 'seating-chart.png';
-        link.href = canvas.toDataURL();
+        link.href = canvas.toDataURL('image/png');
         link.click();
+        
+        document.body.removeChild(fullscreenDiv);
+      }).catch(err => {
+        console.error(err);
+        alert('画像の保存に失敗しました');
+        saveButton.style.display = 'block';
       });
     });
   }
